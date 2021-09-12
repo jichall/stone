@@ -1,0 +1,15 @@
+#
+# Executable files
+#
+*.exe
+*.out
+
+#
+# Compressed files
+#
+*.7z
+*.zip
+*.rar
+*.gz
+*.bz2
+*.xz
