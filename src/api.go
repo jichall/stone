@@ -4,6 +4,7 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/jichall/stone/src/crypt"
@@ -22,9 +23,12 @@ func createAccount(c echo.Context) error {
 	}
 
 	account.ID = accountsId
-	account.Balance = 0
 	account.Secret = crypt.Encrypt(account.Secret)
 	account.CreatedAt = time.Now()
+
+	if account.Balance == 0 {
+		account.Balance = 0
+	}
 
 	accounts[accountsId] = account
 	accountsId++
@@ -33,11 +37,10 @@ func createAccount(c echo.Context) error {
 }
 
 func fetchBalance(c echo.Context) error {
-
 	id, err := strconv.ParseInt(c.Param("id"), 10, 8)
 
 	if err != nil {
-		return c.JSON(400, "failed to parse id param")
+		return c.JSON(400, "id parameter is incorrect")
 	}
 
 	account := accounts[id]
@@ -46,7 +49,6 @@ func fetchBalance(c echo.Context) error {
 }
 
 func login(c echo.Context) error {
-
 	auth := new(models.Authentication)
 
 	if err := c.Bind(auth); err != nil {
@@ -81,13 +83,45 @@ func login(c echo.Context) error {
 
 func fetchTransfers(c echo.Context) error {
 
+	token := strings.Split(c.Request().Header.Get("Authorization"), " ")[1]
+	c.Logger().Printf("%s", token)
+
+	var id int64
+
 	// TODO: retrieve id from token and authentication
+	for i, t := range tokens {
+		if t.Token == token {
+			id = i
+			break
+		}
+	}
+
+	account := accounts[id]
+	accountTransactions := make([]*models.Transaction, 0)
+
+	if account == nil {
+		return c.JSON(404, "account does not exists")
+	}
+
+
+	for _, transaction := range transactions {
+		if transaction.AccountOrigin == strconv.Itoa(int(account.ID)) {
+			accountTransactions = append(accountTransactions, transaction)
+		}
+	}
+
+	return c.JSON(200, accountTransactions)
+}
+
+func createTransfer(c echo.Context) error {
 
 	transaction := new(models.Transaction)
 
 	if err := c.Bind(transaction); err != nil {
 		return c.JSON(400, "failed to parse data")
 	}
+
+	transaction.CreatedAt = time.Now()
 
 	// does the origin and the destiny account exists?
 	var origin *models.Account
@@ -101,11 +135,9 @@ func fetchTransfers(c echo.Context) error {
 
 		if transaction.AccountOrigin == id {
 			origin = acc
-			break
 		}
 		if transaction.AccountDestination == id {
 			destiny = acc
-			break
 		}
 	}
 
@@ -116,14 +148,9 @@ func fetchTransfers(c echo.Context) error {
 
 		origin.Balance -= transaction.Amount
 		destiny.Balance += transaction.Amount
+
+		return c.JSON(200, transaction)
 	}
 
 	return c.JSON(400, "inexistent origin or destiny account")
-}
-
-func createTransfer(c echo.Context) error {
-
-	// TODO: authentication
-
-	return nil
 }
