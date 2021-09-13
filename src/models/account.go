@@ -11,4 +11,8 @@ type Account struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+type Balance struct {
+	Amount float64 `json:"balance"`
+}
+
 type Accounts []Account
