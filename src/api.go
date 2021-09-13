@@ -103,7 +103,6 @@ func fetchTransfers(c echo.Context) error {
 		return c.JSON(404, "account does not exists")
 	}
 
-
 	for _, transaction := range transactions {
 		if transaction.AccountOrigin == strconv.Itoa(int(account.ID)) {
 			accountTransactions = append(accountTransactions, transaction)
@@ -148,6 +147,11 @@ func createTransfer(c echo.Context) error {
 
 		origin.Balance -= transaction.Amount
 		destiny.Balance += transaction.Amount
+
+		transaction.ID = transactionsId
+
+		transactions[transactionsId] = transaction
+		transactionsId++
 
 		return c.JSON(200, transaction)
 	}
