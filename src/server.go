@@ -13,8 +13,13 @@ import (
 var (
 	// as I'm not using any kind of storage database, I will define variables to
 	// represent every entity in my application
-	accounts map[int]*models.Account = make(map[int]*models.Account)
-	transactions map[int]*models.Transaction = make(map[int]*models.Transaction)
+	accounts map[int64]*models.Account = make(map[int64]*models.Account)
+	accountsId int64 = 0
+
+	transactions map[int64]*models.Transaction = make(map[int64]*models.Transaction)
+	transactionsId int64 = 0
+
+	tokens map[int64]*models.Token = make(map[int64]*models.Token)
 )
 
 
