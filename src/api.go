@@ -1,8 +1,7 @@
 package main
 
 import (
-	"crypto/sha1"
-	"encoding/hex"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -13,7 +12,7 @@ import (
 )
 
 func fetchAccounts(c echo.Context) error {
-	return c.JSON(200, accounts)
+	return c.JSON(http.StatusOK, accounts)
 }
 
 func createAccount(c echo.Context) error {
@@ -33,26 +32,26 @@ func createAccount(c echo.Context) error {
 	accounts[accountsId] = account
 	accountsId++
 
-	return c.JSON(200, account)
+	return c.JSON(http.StatusCreated, account)
 }
 
 func fetchBalance(c echo.Context) error {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 8)
 
 	if err != nil {
-		return c.JSON(400, "id parameter is incorrect")
+		return c.JSON(http.StatusBadRequest, "id parameter is incorrect")
 	}
 
 	account := accounts[id]
 
-	return c.JSON(200, &models.Balance{Amount: account.Balance})
+	return c.JSON(http.StatusOK, &models.Balance{Amount: account.Balance})
 }
 
 func login(c echo.Context) error {
 	auth := new(models.Authentication)
 
 	if err := c.Bind(auth); err != nil {
-		return c.JSON(400, "failed to parse data")
+		return c.JSON(http.StatusBadRequest, "failed to parse data")
 	}
 
 	// does the account exists?
@@ -66,26 +65,20 @@ func login(c echo.Context) error {
 	}
 
 	if account != nil {
-		hasher := sha1.New()
-		hasher.Write([]byte(auth.CPF + auth.Secret))
+		t := tokens.Create(account.ID, 3600, models.Authentication{
+			CPF:    account.CPF,
+			Secret: account.Secret,
+		})
 
-		token := hex.EncodeToString(hasher.Sum(nil)[:16])
-
-		// create a token entity and save it in the storage
-		t := models.Token{Token: token}
-		tokens[account.ID] = &t
-
-		return c.JSON(200, t)
+		return c.JSON(http.StatusCreated, t)
 	}
 
-	return c.JSON(404, "account does not exists")
+	return c.JSON(http.StatusNotFound, "account does not exists")
 }
 
 func fetchTransfers(c echo.Context) error {
 
 	token := strings.Split(c.Request().Header.Get("Authorization"), " ")[1]
-	c.Logger().Printf("%s", token)
-
 	var id int64
 
 	// TODO: retrieve id from token and authentication
@@ -100,7 +93,7 @@ func fetchTransfers(c echo.Context) error {
 	accountTransactions := make([]*models.Transaction, 0)
 
 	if account == nil {
-		return c.JSON(404, "account does not exists")
+		return c.JSON(http.StatusNotFound, "account does not exists")
 	}
 
 	for _, transaction := range transactions {
@@ -109,7 +102,7 @@ func fetchTransfers(c echo.Context) error {
 		}
 	}
 
-	return c.JSON(200, accountTransactions)
+	return c.JSON(http.StatusOK, accountTransactions)
 }
 
 func createTransfer(c echo.Context) error {
@@ -117,7 +110,7 @@ func createTransfer(c echo.Context) error {
 	transaction := new(models.Transaction)
 
 	if err := c.Bind(transaction); err != nil {
-		return c.JSON(400, "failed to parse data")
+		return c.JSON(http.StatusBadRequest, "failed to parse data")
 	}
 
 	transaction.CreatedAt = time.Now()
@@ -127,7 +120,7 @@ func createTransfer(c echo.Context) error {
 	var destiny *models.Account
 
 	for _, acc := range accounts {
-		// performance penalty over here (?) It probably would be better to
+		// performance penalty over here (?). It probably would be better to
 		// convert the AccountOrigin and AccountDestination to int64 and compare
 		// them directly
 		id := strconv.Itoa(int(acc.ID))
@@ -142,7 +135,7 @@ func createTransfer(c echo.Context) error {
 
 	if origin != nil && destiny != nil {
 		if origin.Balance <= transaction.Amount {
-			return c.JSON(400, "insufficient funds")
+			return c.JSON(http.StatusBadRequest, "insufficient funds")
 		}
 
 		origin.Balance -= transaction.Amount
@@ -153,8 +146,8 @@ func createTransfer(c echo.Context) error {
 		transactions[transactionsId] = transaction
 		transactionsId++
 
-		return c.JSON(200, transaction)
+		return c.JSON(http.StatusOK, transaction)
 	}
 
-	return c.JSON(400, "inexistent origin or destiny account")
+	return c.JSON(http.StatusBadRequest, "inexistent origin or destiny account")
 }
