@@ -8,20 +8,21 @@ import (
 	"github.com/jichall/stone/src/models"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+
+	"github.com/jichall/stone/src/token"
 )
 
 var (
 	// as I'm not using any kind of storage database, I will define variables to
 	// represent every entity in my application
-	accounts map[int64]*models.Account = make(map[int64]*models.Account)
-	accountsId int64 = 0
+	accounts   map[int64]*models.Account = make(map[int64]*models.Account)
+	accountsId int64                     = 0
 
-	transactions map[int64]*models.Transaction = make(map[int64]*models.Transaction)
-	transactionsId int64 = 0
+	transactions   map[int64]*models.Transaction = make(map[int64]*models.Transaction)
+	transactionsId int64                         = 0
 
-	tokens map[int64]*models.Token = make(map[int64]*models.Token)
+	tokens token.TokenStorage = token.New()
 )
-
 
 func serve(host, port string) {
 

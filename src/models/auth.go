@@ -1,5 +1,7 @@
 package models
 
+import "time"
+
 type Authentication struct {
 	CPF    string `json:"cpf"`
 	Secret string `json:"secret"`
@@ -7,4 +9,6 @@ type Authentication struct {
 
 type Token struct {
 	Token string `json:"token"`
+	Issued time.Time `json:"issued"`
+	Expiration time.Duration `json:"expiration"`
 }
